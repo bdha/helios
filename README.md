@@ -85,7 +85,7 @@ https://github.com/helium/router/tree/experiment/helios/helios
 
 The `default.json` is where you put all the default values for your templates (if they don't exist in either default.json or in Consul they end up blank in the config file, which is usually not what you want). Any of these variables can be overridden by setting them in Consul.
 
-The `smf` folder contains the SMF definition and the run script (that the SMF definition references). Every time the package is upgraded, the new SMF definition is re-imported.
+The `smf` folder contains the SMF definition. Every time the package is upgraded, the new SMF definition is re-imported. Run scripts can also live here (I managed to get rid of the one router had).
 
 `hooks` contains the 2 currently implemented hooks, the `install` and `config` hooks. More of these are planned, just not implemented yet.
 
