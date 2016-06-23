@@ -46,8 +46,40 @@ else
 fi
 
 INSTALLED=0
+UPGRADE_SESSION=""
 
 if [ "$VERSION" != "$CURRENT_VERSION" ]; then
+	## obtain the upgrade lock
+	## first create a session tied only to node health that has a TTL of one hour
+	## if this node crashes, the lock should be released
+	UPGRADE_SESSION=`curl -s -X PUT -d "{\"lockdelay\": \"0s\", \"checks\": [\"serfHealth\"], \"TTL\": \"3600s\", \"name\": \"$SERVICE-upgrade\"}"  http://127.0.0.1:8500/v1/session/create | json ID`
+
+
+	## acquire the upgrade lock
+	echo "getting upgrade lock"
+	LOCK=`curl -s -X PUT -d $ZONENAME http://localhost:8500/v1/kv/service/$SERVICE/upgrade?acquire=$UPGRADE_SESSION`
+	while [ $LOCK != "true" ]; do
+		sleep 5
+		LOCK=`curl -s -X PUT -d $ZONENAME http://localhost:8500/v1/kv/service/$SERVICE/upgrade?acquire=$UPGRADE_SESSION`
+	done
+	echo "lock acquired!"
+
+	## mark ourselves down in Consul and CNS
+	mdata-put triton.cns.status down
+	curl -s "http://127.0.0.1:8500/v1/agent/maintenance?enable=true"
+
+	## check the service is actually on here
+	svcs router > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		svcadm disable $SERVICE
+		## wait for the service to go critical
+		curl -s http://127.0.0.1:8500/v1/agent/checks | grep -q critical
+		while [ $? -ne 0 ]; do
+			sleep 5
+			curl -s http://127.0.0.1:8500/v1/agent/checks | grep -q critical
+		done
+	fi
+		
 	aws s3 cp s3://helium-releases/helium-$SERVICE/$SERVICE-$VERSION-sunos.tgz .
 
 	mkdir -p /opt/helium/$SERVICE
@@ -75,7 +107,7 @@ curl -s http://127.0.0.1:8500/v1/kv/$SERVICE/config?recurse=1 | json -a Key Valu
 echo "    \"host_ip\": \"$HOSTIP\"" >> ~/data.json
 echo "}" >> ~/data.json
 
-CONFIG_VERSION=`shasum  data.json  | awk '{print $1}'`
+CONFIG_VERSION=`shasum ~/data.json  | awk '{print $1}'`
 
 CONFIGURED=0
 if [ "$CURRENT_CONFIG" != "$CONFIG_VERSION" -o $INSTALLED -eq 1 ]; then
@@ -114,12 +146,31 @@ if [ $INSTALLED -eq 1 -o $CONFIGURED -eq 1 ]; then
 	
 		
 	## we are going to delete any old sessions and create a new one because the set of checks may have changed
-	if [ -z $CURRENT_SESSION ]; then
+	if [ -n $CURRENT_SESSION ]; then
 		curl -s -X PUT http://127.0.0.1:8500/v1/session/destroy/$CURRENT_SESSION
 	fi
 
 	if [ $INSTALLED -eq 1 ]; then
 		echo "$SERVICE was installed or upgraded"
+		## check the service is actually on here
+		svcs router > /dev/null 2>&1
+		if [ $? -eq 0 ]; then
+			## wait for the service to have no criticals
+			curl -s http://127.0.0.1:8500/v1/agent/checks | grep -qv critical
+			while [ $? -ne 0 ]; do
+				sleep 5
+				curl -s http://127.0.0.1:8500/v1/agent/checks | grep -qv critical
+			done
+		fi
+		
+		## destroy the upgrade session, so the other nodes can get the lock
+		if [ -n $UPGRADE_SESSION ]; then
+			echo "releasing upgrade lock"
+			curl -s -X PUT http://127.0.0.1:8500/v1/session/destroy/$UPGRADE_SESSION
+			## mark ourselves down in Consul and CNS
+			mdata-put triton.cns.status up
+			curl -s "http://127.0.0.1:8500/v1/agent/maintenance?enable=false"
+		fi
 	else
 		echo "$SERVICE was reconfigured"
 	fi
