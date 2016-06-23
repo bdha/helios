@@ -1,6 +1,9 @@
 #!/usr/bin/ksh
 
 ZONENAME=`zonename`
+## TODO this needs to be configurable
+CNS_DOMAIN="helios.kwatz.helium.zone"
+HOSTIP=`ifconfig net0 | grep inet | awk '{print $2}'`
 
 export SERVICE=`curl -s http://127.0.0.1:8500/v1/kv/$ZONENAME/services | json 0.Value | base64 -d`
 
@@ -68,6 +71,17 @@ if [ "$VERSION" != "$CURRENT_VERSION" ]; then
 	mdata-put triton.cns.status down
 	curl -s "http://127.0.0.1:8500/v1/agent/maintenance?enable=true"
 
+	if [ -n $CNS_DOMAIN ]; then
+		echo "waiting for CNS to notice we're down"
+		## wait for CNS to notice we're out of service
+		host $CNS_DOMAIN | grep -q $HOSTIP
+		while [ $? -eq 0 ]; do
+			sleep 5
+			host $CNS_DOMAIN | grep -q $HOSTIP
+		done
+		echo "CNS shows us down, continuing"
+	fi
+
 	## check the service is actually on here
 	svcs router > /dev/null 2>&1
 	if [ $? -eq 0 ]; then
@@ -98,7 +112,6 @@ fi
 ## we need to construct the mustache 'data' json from consul/system attributes (eg. IP)
 ## TODO 'system' variables
 
-HOSTIP=`ifconfig net0 | grep inet | awk '{print $2}'`
 
 echo "{" > ~/data.json
 
