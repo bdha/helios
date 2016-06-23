@@ -1,4 +1,4 @@
-.PHONY: ensure_env deps
+.PHONY: ensure_env deps clean
 
 all: deps run
 
@@ -10,3 +10,6 @@ env:
 
 run:
 	@./env/bin/python example.py
+
+clean:
+	@rm -rf env
