@@ -243,7 +243,12 @@ def check_service(c, zonename, service, cnsname, primary=False):
         for key, value in checks.items():
             if value['ServiceName'] == service:
                 servicenames.append(value['CheckID'])
-        current_session = c.session.create("{0}-leader".format(service), checks=servicenames, lock_delay=0, ttl=120)
+        try:
+            current_session = c.session.create("{0}-leader".format(service), checks=servicenames, lock_delay=0, ttl=120)
+        except consul.base.ConsulException:
+            ## can't create the session because the service is down
+            print("service is DOWN")
+            return
         res = c.kv.put('sessions/{0}/{1}'.format(zonename, service), current_session)
         print(res)
     elif primary == True:
