@@ -9,7 +9,7 @@ setup(name='Helios',
       author_email='helium.com',
       url='https://github.com/helium/helios/',
       py_modules=['example'],
-      install_requires=['python-consul'],
+      install_requires=['python-consul', 'netifaces', 'pystache'],
       entry_points='''
         [console_scripts]
         example=example:main
