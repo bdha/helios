@@ -252,9 +252,8 @@ def check_service(c, zonename, service, cnsname, primary=False):
         c.session.renew(current_session)
     
     if primary == True:
-        c.kv.put("service/{0}/leader".format(service), zonename, acquire=current_session)
-        leader = c.kv.get("service/{0}/leader".format(service))
-        if leader == zonename:
+        locked = c.kv.put("service/{0}/leader".format(service), zonename, acquire=current_session)
+        if locked:
             print("we are the leader")
         else:
             print("we are not the leader")
