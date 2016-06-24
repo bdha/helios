@@ -14,7 +14,6 @@ import pystache
 def read_required_key(c, key):
     index = None
     data = None
-    print(key)
     while data == None:
         index, data = c.kv.get(key, index=index)
         if data:
@@ -27,7 +26,6 @@ def get_current_session(c, zonename, service):
     if data != None:
             index, data  = c.session.info(current_session)
             if data:
-                print(data)
                 current_session = data['Value']
     return current_session
 
@@ -77,8 +75,6 @@ def go_out_of_service(c, cnsname):
     return
     print("waiting for CNS to report us down")
     while host_ip in addresses:
-        print(host_ip)
-        print(addresses)
         time.sleep(5)
         hostname, aliases, addresses = socket.gethostbyname_ex(cnsname)
 
@@ -132,14 +128,12 @@ def register_check(c, service, check_filename):
 
         if checkobj != None:
                 c.agent.check.register(check['name'], checkobj, service_id=check['serviceid'])
-        print(check)
 
 ## this can be used for primary and auxiliary services (like pgbouncer)
 def check_service(c, zonename, service, cnsname, primary=False):
     version = read_required_key(c, '{0!s}/version'.format(service))
 
     services = c.agent.services()
-    print(services)
     tags = []
     if service in services:
         tags = services[service]['Tags']
@@ -171,13 +165,11 @@ def check_service(c, zonename, service, cnsname, primary=False):
     index, configs = c.kv.get("{0}/config".format(service), recurse=True)
     json_config = {}
     for config in configs:
-        print(config)
         json_config[config['Key'].split('/')[-1]] = config['Value'].decode("utf-8")
  
     foo=netifaces.ifaddresses('net0')
     host_ip=foo[netifaces.AF_INET][0]['addr']
     json_config['host_ip'] = host_ip
-    print(json_config)
 
     json_data = json.dumps(json_config, sort_keys=True, indent=4, separators=(',', ': '))
 
@@ -206,7 +198,6 @@ def check_service(c, zonename, service, cnsname, primary=False):
     current_session = None
     if primary == True:
         current_session = get_current_session(c, zonename, service)
-        print(current_session)
     
     if installed == True or configured == True:
         ## import the new service definition, it might have changed
@@ -216,7 +207,6 @@ def check_service(c, zonename, service, cnsname, primary=False):
 
         c.agent.service.register(service, tags=["version-{0}".format(version), "config-{0}".format(config_version)])
         checks = glob.glob("/opt/helium/{0}/current/helios/checks/*.json".format(service))
-        print(checks)
         for check in checks:
                 register_check(c, service, check)
         ## destroy any old leader session
@@ -252,6 +242,10 @@ def check_service(c, zonename, service, cnsname, primary=False):
     
     if primary == True:
         locked = c.kv.put("service/{0}/leader".format(service), zonename, acquire=current_session)
+        if locked == True:
+            print("we are the leader")
+        else:
+            print("we are not the leader")
 
 def main():
     c = consul.Consul()
@@ -259,9 +253,6 @@ def main():
     cnsname="helios.kwatz.helium.zone"
     foo=netifaces.ifaddresses('net0')
     host_ip=foo[netifaces.AF_INET][0]['addr']
-
-    print(zonename)
-    print(host_ip)
 
     index = None
     service = read_required_key(c, "{0!s}/services".format(zonename))
