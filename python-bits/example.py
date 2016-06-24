@@ -24,10 +24,17 @@ def get_current_session(c, zonename, service):
     current_session = None
     index, data = c.kv.get('sessions/{0}/{1}'.format(zonename, service))
     if data != None:
-            index, data  = c.session.info(current_session)
-            if data:
-                current_session = data['Value']
-    return current_session
+            try:
+                current_session = data['Value'].decode("utf-8")
+                print("current session is {0}".format(current_session))
+                index, data2  = c.session.info(current_session)
+                if data2:
+                    return current_session
+                else:
+                    return None
+            except consul.base.ConsulException:
+                return None
+    return None
 
 def check_service_symlink(service, current_version):
     try:
@@ -229,6 +236,7 @@ def check_service(c, zonename, service, cnsname, primary=False):
         enter_service(c)
 
     if current_session == None and primary == True:
+        print("creating new session")
         ## create a new leader session using the service's checks
         checks = c.agent.checks()
         servicenames = ['serfHealth']
@@ -236,13 +244,17 @@ def check_service(c, zonename, service, cnsname, primary=False):
             if value['ServiceName'] == service:
                 servicenames.append(value['CheckID'])
         current_session = c.session.create("{0}-leader".format(service), checks=servicenames, lock_delay=0, ttl=120)
+        res = c.kv.put('sessions/{0}/{1}'.format(zonename, service), current_session)
+        print(res)
     elif primary == True:
+        print("renewing session")
         ## renew the session
         c.session.renew(current_session)
     
     if primary == True:
-        locked = c.kv.put("service/{0}/leader".format(service), zonename, acquire=current_session)
-        if locked == True:
+        c.kv.put("service/{0}/leader".format(service), zonename, acquire=current_session)
+        leader = c.kv.get("service/{0}/leader".format(service))
+        if leader == zonename:
             print("we are the leader")
         else:
             print("we are not the leader")
