@@ -9,7 +9,7 @@ env:
 	@virtualenv env
 
 run:
-	@./env/bin/python example.py
+	@./env/bin/python helios.py
 
 clean:
 	@rm -rf env
