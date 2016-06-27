@@ -64,7 +64,7 @@ def get_upgrade_lock(c, service, zonename):
     session = get_upgrade_session(c, service, zonename)
     locked = False
     while locked == False:
-        locked = c.kv.put("service/{0}/upgrade".format(service), zonename, acquire=session, behaviour='delete')
+        locked = c.kv.put("service/{0}/upgrade".format(service), zonename, acquire=session, behavior='delete')
     return session
 
 def release_upgrade_lock(c, session):
@@ -323,7 +323,7 @@ def check_service(c, zonename, service, cnsname, primary=False):
         c.session.renew(current_session)
     
     if primary == True:
-        locked = c.kv.put("service/{0}/leader".format(service), zonename, acquire=current_session, behaviour='delete')
+        locked = c.kv.put("service/{0}/leader".format(service), zonename, acquire=current_session, behavior='delete')
         if locked:
             print("we are the leader")
         else:
