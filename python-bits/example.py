@@ -118,9 +118,7 @@ def install_artefact(service, version, filename):
     subprocess.call(["tar", "-C", "/opt/helium/{0}".format(service), "-xf", filename])
     subprocess.call(["rm", "-f", "/opt/helium/{0}/current".format(service)])
     subprocess.call(["ln", "-sf", "/opt/helium/{0}/{0}-{1}/".format(service, version), "/opt/helium/{0}/current".format(service)])
-    ## Run the install hook
-    subprocess.call(["/opt/helium/{0}/current/helios/hooks/install.sh".format(service)])
-
+    
 def register_check(c, service, check_filename):
     with open(check_filename) as check_file:
         check = json.load(check_file)
@@ -135,6 +133,67 @@ def register_check(c, service, check_filename):
 
         if checkobj != None:
                 c.agent.check.register(check['name'], checkobj, service_id=check['serviceid'])
+
+def get_package_info(service):
+    with open('/opt/helium/{0}/current/helios/package.json'.format(service)) as pkg_file:
+        pkg_info = json.load(pkg_file)
+    return pkg_info
+
+def install_package(packagename):
+    res = subprocess.call(["pkgin", "-y", "install", packagename])
+    ## TODO fail more dramatically here?
+    if res != 0:
+        print("Unable to install package {0}".format(packagename))
+
+def ensure_packages(service):
+    pkg_info = get_package_info(service)
+    if 'packages' in pkg_info:
+        for package in pkg_info['packages']:
+                install_package(package)
+
+def ensure_roles(c, zonename, service, cnsname):
+    pkg_info = get_package_info(service)
+    if 'roles' in pkg_info:
+        for role in pkg_info['roles']:
+           check_service(c, zonename, role, cnsname, False)
+
+def smfgen(servicename):
+    subprocess.call("smfgen < /opt/helium/{0}/current/helios/config/service.json > /opt/helium/{0}/current/helios/config/service.xml".format(servicename), shell=True)
+
+def ensure_user(userfilename):
+    with open(userfilename) as user_file:
+        user = json.load(user_file)
+    if 'home' in user and 'id' in user:
+        ## check the user and group exist
+        group_exists = subprocess.call(["getent", "group", user['id']])
+        if group_exists != 0:
+            cmd = ["groupadd"]
+            if 'gid' in user:
+                cmd.extend(["-g", str(user['gid'])])
+            cmd.extend([user['id']])
+            print(cmd)
+            subprocess.call(cmd)
+        user_exists = subprocess.call(["getent", "passwd", user['id']])
+        if user_exists != 0:
+            ## #useradd -g 3003 -u 3003 -c "Helium Router" -s /bin/bash -d /opt/helium/router router
+            cmd = ["useradd", "-g", user['id']]
+            if 'uid' in user:
+                cmd.extend(["-u", str(user['uid'])])
+            if 'shell' in user:
+                cmd.extend(["-s", user['shell']])
+            if 'home' in user:
+                cmd.extend(["-d", user['home']])
+            if 'groups' in user:
+                cmd.extend(["-G", ",".join(user['groups'])])
+            cmd.extend(["-m", user['id']])
+            print(cmd)
+            subprocess.call(cmd)
+
+def ensure_users(service):
+    userfiles = glob.glob("/opt/helium/{0}/current/helios/config/users/*.json".format(service))
+    print(userfiles)
+    for userfile in userfiles:
+        ensure_user(userfile)
 
 ## this can be used for primary and auxiliary services (like pgbouncer)
 def check_service(c, zonename, service, cnsname, primary=False):
@@ -166,6 +225,12 @@ def check_service(c, zonename, service, cnsname, primary=False):
         maybe_disable_service(c, service)
         filename = fetch_artefact(service, version)
         install_artefact(service, version, filename)
+        ensure_packages(service)
+        ensure_users(service)
+        # ensure_roles(c, zonename, service, cnsname),
+        smfgen(service)
+        ## Run the install hook
+        subprocess.call(["/opt/helium/{0}/current/helios/hooks/install.sh".format(service)])
         installed = True
 
     ## compute the config SHA and compare it to the one in the tag
@@ -208,7 +273,7 @@ def check_service(c, zonename, service, cnsname, primary=False):
     
     if installed == True or configured == True:
         ## import the new service definition, it might have changed
-        subprocess.call(["svccfg", "import", "/opt/helium/{0}/current/helios/smf/{0}.xml".format(service)])
+        subprocess.call(["svccfg", "import", "/opt/helium/{0}/current/helios/config/service.xml".format(service)])
         subprocess.call(["svcadm", "enable", service])
         subprocess.call(["svcadm", "clear", service])
 
