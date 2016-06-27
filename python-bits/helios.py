@@ -218,6 +218,7 @@ def check_service(c, zonename, service, cnsname, primary=False):
         current_version = None
 
     installed = False
+    upgrade_session = None
     if version != current_version:
         print("upgrading service to {0}".format(version))
         upgrade_session = get_upgrade_lock(c, service, zonename)
@@ -300,7 +301,8 @@ def check_service(c, zonename, service, cnsname, primary=False):
                 break
             time.sleep(5)
         ## ok, the service is green now, release the upgrade lock and leave maintenance mode
-        release_upgrade_lock(c, upgrade_session)
+        if upgrade_session != None:
+            release_upgrade_lock(c, upgrade_session)
         enter_service(c)
 
     if current_session == None and primary == True:
