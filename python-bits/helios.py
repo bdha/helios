@@ -197,7 +197,7 @@ def ensure_users(service):
 
 ## this can be used for primary and auxiliary services (like pgbouncer)
 def check_service(c, zonename, service, cnsname, primary=False):
-    version = read_required_key(c, '{0!s}/version'.format(service))
+    version = read_required_key(c, 'service/{0}/version'.format(service))
 
     services = c.agent.services()
     tags = []
@@ -234,7 +234,7 @@ def check_service(c, zonename, service, cnsname, primary=False):
         installed = True
 
     ## compute the config SHA and compare it to the one in the tag
-    index, configs = c.kv.get("{0}/config".format(service), recurse=True)
+    index, configs = c.kv.get("service/{0}/config".format(service), recurse=True)
     json_config = {}
     for config in configs:
         json_config[config['Key'].split('/')[-1]] = config['Value'].decode("utf-8")
@@ -336,7 +336,7 @@ def main():
     host_ip=foo[netifaces.AF_INET][0]['addr']
 
     index = None
-    service = read_required_key(c, "{0!s}/services".format(zonename))
+    service = read_required_key(c, "nodes/{0!s}/services".format(zonename))
 
     while True:
         check_service(c, zonename, service, cnsname, primary=True)

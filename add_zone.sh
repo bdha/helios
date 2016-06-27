@@ -22,7 +22,7 @@ done
 ADDRESS=`echo "$NODEINFO" | json Node.Address`
 
 #RES=`curl -s -X PUT -H "Content-Type: application/json" -d "{\"Node\": \"$ZONENAME\", \"Address\": \"$ADDRESS\", \"Service\": {\"Service\": \"$1\"}}" http://$IP/v1/catalog/register`
-RES=`curl -s -X PUT -d "$1" http://$IP/v1/kv/$ZONENAME/services`
+RES=`curl -s -X PUT -d "$1" http://$IP/v1/kv/nodes/$ZONENAME/services`
 
 if [ "$RES" != "true" ]; then
 	echo "Failed to register service $1 on $ZONENAME: $RES"
