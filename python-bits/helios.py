@@ -267,6 +267,7 @@ def check_service(c, zonename, service, cnsname, primary=False):
                 text_file.close()
        
         subprocess.call(["/opt/helium/{0}/current/helios/hooks/config.sh".format(service)])
+        configured = True
 
     current_session = None
     if primary == True:
@@ -278,6 +279,7 @@ def check_service(c, zonename, service, cnsname, primary=False):
         subprocess.call(["svcadm", "enable", service])
         subprocess.call(["svcadm", "clear", service])
 
+        c.agent.service.deregister(service)
         c.agent.service.register(service, tags=["version-{0}".format(version), "config-{0}".format(config_version)])
         checks = glob.glob("/opt/helium/{0}/current/helios/checks/*.json".format(service))
         for check in checks:
