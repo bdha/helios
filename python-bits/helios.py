@@ -236,8 +236,9 @@ def check_service(c, zonename, service, cnsname, primary=False):
     ## compute the config SHA and compare it to the one in the tag
     index, configs = c.kv.get("service/{0}/config".format(service), recurse=True)
     json_config = {}
-    for config in configs:
-        json_config[config['Key'].split('/')[-1]] = config['Value'].decode("utf-8")
+    if configs != None:
+        for config in configs:
+            json_config[config['Key'].split('/')[-1]] = config['Value'].decode("utf-8")
  
     foo=netifaces.ifaddresses('net0')
     host_ip=foo[netifaces.AF_INET][0]['addr']
@@ -322,7 +323,7 @@ def check_service(c, zonename, service, cnsname, primary=False):
         c.session.renew(current_session)
     
     if primary == True:
-        locked = c.kv.put("service/{0}/leader".format(service), zonename, acquire=current_session)
+        locked = c.kv.put("service/{0}/leader".format(service), zonename, acquire=current_session, behaviour='delete')
         if locked:
             print("we are the leader")
         else:
