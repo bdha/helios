@@ -64,7 +64,7 @@ def get_upgrade_lock(c, service, zonename):
     session = get_upgrade_session(c, service, zonename)
     locked = False
     while locked == False:
-        locked = c.kv.put("service/{0}/upgrade".format(service), zonename, acquire=session)
+        locked = c.kv.put("service/{0}/upgrade".format(service), zonename, acquire=session, behaviour='delete')
     return session
 
 def release_upgrade_lock(c, session):

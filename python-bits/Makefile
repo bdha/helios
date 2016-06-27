@@ -13,3 +13,6 @@ run:
 
 clean:
 	@rm -rf env
+
+package:
+	@platter build -p python3.5 .

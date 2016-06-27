@@ -8,10 +8,10 @@ setup(name='Helios',
       author='Helium',
       author_email='helium.com',
       url='https://github.com/helium/helios/',
-      py_modules=['example'],
+      py_modules=['helios'],
       install_requires=['python-consul', 'netifaces', 'pystache'],
       entry_points='''
         [console_scripts]
-        example=example:main
+        helios=helios:main
       '''
      )
