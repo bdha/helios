@@ -54,7 +54,7 @@ def get_upgrade_session(c, service, zonename):
     for session in sessions:
         if session['Node'] == zonename and session['Name'] == "{0}-upgrade".format(service):
                 c.session.destroy(session["ID"])
-    session = c.session.create(name="{0}-upgrade".format(service), lock_delay=0, ttl=3600)
+    session = c.session.create(name="{0}-upgrade".format(service), lock_delay=0, ttl=3600, behavior='delete')
     return session
 
 def get_upgrade_lock(c, service, zonename):
@@ -64,7 +64,7 @@ def get_upgrade_lock(c, service, zonename):
     session = get_upgrade_session(c, service, zonename)
     locked = False
     while locked == False:
-        locked = c.kv.put("service/{0}/upgrade".format(service), zonename, acquire=session, behavior='delete')
+        locked = c.kv.put("service/{0}/upgrade".format(service), zonename, acquire=session)
     return session
 
 def release_upgrade_lock(c, session):
@@ -310,7 +310,7 @@ def check_service(c, zonename, service, cnsname, primary=False):
             if value['ServiceName'] == service:
                 servicenames.append(value['CheckID'])
         try:
-            current_session = c.session.create("{0}-leader".format(service), checks=servicenames, lock_delay=0, ttl=120)
+            current_session = c.session.create("{0}-leader".format(service), checks=servicenames, lock_delay=0, ttl=120, behavior='delete')
         except consul.base.ConsulException:
             ## can't create the session because the service is down
             print("service is DOWN")
@@ -323,7 +323,7 @@ def check_service(c, zonename, service, cnsname, primary=False):
         c.session.renew(current_session)
     
     if primary == True:
-        locked = c.kv.put("service/{0}/leader".format(service), zonename, acquire=current_session, behavior='delete')
+        locked = c.kv.put("service/{0}/leader".format(service), zonename, acquire=current_session)
         if locked:
             print("we are the leader")
         else:
