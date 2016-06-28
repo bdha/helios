@@ -228,7 +228,7 @@ def check_service(c, zonename, service, cnsname, primary=False):
         if os.path.isfile(filename) != True:
             print("Can't get {0}".format(filename), flush=True)
             return
-        print("upgrading service to {0}".format(version), flush=True)
+        print("upgrading service {0} to {1}".format(service, version), flush=True)
         upgrade_session = get_upgrade_lock(c, service, zonename)
         go_out_of_service(c, cnsname)
         maybe_disable_service(c, service)
