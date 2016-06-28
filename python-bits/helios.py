@@ -224,11 +224,14 @@ def check_service(c, zonename, service, cnsname, primary=False):
     installed = False
     upgrade_session = None
     if version != current_version:
+        filename = fetch_artefact(service, version)
+        if os.path.isfile(filename) != True:
+            print("Can't get {0}".format(filename))
+            return
         print("upgrading service to {0}".format(version))
         upgrade_session = get_upgrade_lock(c, service, zonename)
         go_out_of_service(c, cnsname)
         maybe_disable_service(c, service)
-        filename = fetch_artefact(service, version)
         install_artefact(service, version, filename)
         ensure_packages(service)
         ensure_users(service)
