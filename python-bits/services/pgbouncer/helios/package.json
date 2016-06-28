@@ -1,0 +1,18 @@
+{
+  "name": "helium-pgbouncer",
+  "service_name": "pgbouncee",
+  "description": "pgbouncer",
+  "author": "foo",
+  "artifact": "s3://helium-releases/{{name}}/{{service_name}}-{{version}}-sunos.tgz",
+  "roles": [
+    "helios"
+  ],
+  "packages": [
+    "postgresql94-client",
+    "pgbouncer",
+    "py27-cElementTree",
+    "py27-elementtree",
+    "helium-awscli"
+  ],
+  "license": "foo"
+}
