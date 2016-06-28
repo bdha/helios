@@ -259,8 +259,7 @@ def check_service(c, zonename, service, cnsname, primary=False):
 
     # run the pre-config, if it exists, and merge its json output in with the rest
     if os.path.isfile("/opt/helium/{0}/current/helios/hooks/config-pre.sh".format(service)) == True:
-        hook_json = json.load(subprocess.Popen("/opt/helium/{0}/current/helios/hooks/config-pre.sh".format(service),
-                shell=True, stdout=subprocess.PIPE).stdout.read().rstrip().decode("utf-8"))
+        hook_json = json.loads(subprocess.Popen("/opt/helium/{0}/current/helios/hooks/config-pre.sh".format(service), shell=True, stdout=subprocess.PIPE).stdout.read().rstrip().decode("utf-8"))
         merged_config = {**merged_config, **hook_json}
 
     json_data = json.dumps(merged_config, sort_keys=True, indent=4, separators=(',', ': '))
