@@ -27,7 +27,7 @@ def get_current_session(c, zonename, service):
     if data != None:
             try:
                 current_session = data['Value'].decode("utf-8")
-                print("current session is {0}".format(current_session))
+                print("current session is {0}".format(current_session), flush=True)
                 index, data2  = c.session.info(current_session)
                 if data2:
                     return current_session
@@ -81,7 +81,7 @@ def go_out_of_service(c, cnsname):
     hostname, aliases, addresses = socket.gethostbyname_ex(cnsname)
     ## XXX this seems to end up using the system resolver, which is 8.8.8.8, which is caching a lot
     return
-    print("waiting for CNS to report us down")
+    print("waiting for CNS to report us down", flush=True)
     while host_ip in addresses:
         time.sleep(5)
         hostname, aliases, addresses = socket.gethostbyname_ex(cnsname)
@@ -147,7 +147,7 @@ def install_package(packagename):
     res = subprocess.call(["pkgin", "-y", "install", packagename])
     ## TODO fail more dramatically here?
     if res != 0:
-        print("Unable to install package {0}".format(packagename))
+        print("Unable to install package {0}".format(packagename), flush=True)
 
 def ensure_packages(service):
     pkg_info = get_package_info(service)
@@ -175,7 +175,7 @@ def ensure_user(userfilename):
             if 'gid' in user:
                 cmd.extend(["-g", str(user['gid'])])
             cmd.extend([user['id']])
-            print(cmd)
+            print(cmd, flush=True)
             subprocess.call(cmd)
         user_exists = subprocess.call(["getent", "passwd", user['id']])
         if user_exists != 0:
@@ -190,18 +190,18 @@ def ensure_user(userfilename):
             if 'groups' in user:
                 cmd.extend(["-G", ",".join(user['groups'])])
             cmd.extend(["-m", user['id']])
-            print(cmd)
+            print(cmd, flush=True)
             subprocess.call(cmd)
 
 def ensure_users(service):
     userfiles = glob.glob("/opt/helium/{0}/current/helios/config/users/*.json".format(service))
-    print(userfiles)
+    print(userfiles, flush=True)
     for userfile in userfiles:
         ensure_user(userfile)
 
 ## this can be used for primary and auxiliary services (like pgbouncer)
 def check_service(c, zonename, service, cnsname, primary=False):
-    print(service)
+    print(service, flush=True)
     version = read_required_key(c, 'service/{0}/version'.format(service))
 
     services = c.agent.services()
@@ -226,9 +226,9 @@ def check_service(c, zonename, service, cnsname, primary=False):
     if version != current_version:
         filename = fetch_artefact(service, version)
         if os.path.isfile(filename) != True:
-            print("Can't get {0}".format(filename))
+            print("Can't get {0}".format(filename), flush=True)
             return
-        print("upgrading service to {0}".format(version))
+        print("upgrading service to {0}".format(version), flush=True)
         upgrade_session = get_upgrade_lock(c, service, zonename)
         go_out_of_service(c, cnsname)
         maybe_disable_service(c, service)
@@ -299,7 +299,7 @@ def check_service(c, zonename, service, cnsname, primary=False):
             c.session.destroy(current_session)
             current_session = None
 
-        print("waiting for health checks to go green")
+        print("waiting for health checks to go green", flush=True)
         while True:
             checks = c.agent.checks()
             services = []
@@ -317,7 +317,7 @@ def check_service(c, zonename, service, cnsname, primary=False):
             sys.exit()
 
     if current_session == None and primary == True:
-        print("creating new session")
+        print("creating new session", flush=True)
         ## create a new leader session using the service's checks
         checks = c.agent.checks()
         servicenames = ['serfHealth']
@@ -328,21 +328,21 @@ def check_service(c, zonename, service, cnsname, primary=False):
             current_session = c.session.create("{0}-leader".format(service), checks=servicenames, lock_delay=0, ttl=120, behavior='delete')
         except consul.base.ConsulException:
             ## can't create the session because the service is down
-            print("service is DOWN")
+            print("service is DOWN", flush=True)
             return
         res = c.kv.put('sessions/{0}/{1}'.format(zonename, service), current_session)
-        print(res)
+        print(res, flush=True)
     elif primary == True:
-        print("renewing session")
+        print("renewing session", flush=True)
         ## renew the session
         c.session.renew(current_session)
 
     if primary == True:
         locked = c.kv.put("service/{0}/leader".format(service), zonename, acquire=current_session)
         if locked:
-            print("we are the leader")
+            print("we are the leader", flush=True)
         else:
-            print("we are not the leader")
+            print("we are not the leader", flush=True)
 
 def main():
     c = consul.Consul()
