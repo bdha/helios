@@ -253,9 +253,19 @@ def check_service(c, zonename, service, cnsname, primary=False):
     host_ip=foo[netifaces.AF_INET][0]['addr']
     json_config['host_ip'] = host_ip
 
-    json_data = json.dumps(json_config, sort_keys=True, indent=4, separators=(',', ': '))
+    with open('/opt/helium/{0}/current/helios/default.json'.format(service)) as defaults_file:
+        defaults = json.load(defaults_file)
+    merged_config = {**defaults, **json_config}
 
-    text_file = open("data.json", "w")
+    # run the pre-config, if it exists, and merge its json output in with the rest
+    if os.path.isfile("/opt/helium/{0}/current/helios/hooks/config-pre.sh".format(service)) == True:
+        hook_json = json.load(subprocess.Popen("/opt/helium/{0}/current/helios/hooks/config-pre.sh".format(service),
+                shell=True, stdout=subprocess.PIPE).stdout.read().rstrip().decode("utf-8"))
+        merged_config = {**merged_config, **hook_json}
+
+    json_data = json.dumps(merged_config, sort_keys=True, indent=4, separators=(',', ': '))
+
+    text_file = open("{0}-data.json".format(service), "w")
     text_file.write(json_data)
     text_file.close()
     config_version = hashlib.sha1(json_data.encode("utf-8")).hexdigest()
@@ -263,9 +273,6 @@ def check_service(c, zonename, service, cnsname, primary=False):
     configured = False
     if config_version != current_config or installed == True:
         ## find all .mustache files in /opt/helium/$SERVICE/current and template them
-        with open('/opt/helium/{0}/current/helios/default.json'.format(service)) as defaults_file:
-             defaults = json.load(defaults_file)
-        merged_config = {**defaults, **json_config}
         mustaches = glob.glob("/opt/helium/{0}/current/**/*.mustache".format(service), recursive=True)
         renderer = pystache.Renderer()
         for m in mustaches:
