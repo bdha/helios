@@ -1,0 +1,9 @@
+{
+    "ident": "helios",
+    "category": "application/management",
+    "label": "Helium deploy service",
+    "environment": {"PATH": "/opt/helium/bin:/opt/helium/sbin:/usr/local/sbin:/usr/local/bin:/opt/local/sbin:/opt/local/bin:/usr/sbin:/usr/bin:/sbin"},
+    "start": {
+        "exec": "/opt/helium/helios/current/bin/helios"
+    }
+}

@@ -9,6 +9,7 @@ import json
 import hashlib
 import glob
 import pystache
+import sys
 
 
 def read_required_key(c, key):
@@ -94,6 +95,9 @@ def maybe_disable_service(c, service):
     if status == '':
         ## service not installed
         return
+    ## don't disable outselves
+    if service == "helios":
+        return
     subprocess.call(["svcadm", "disable", service])
     ## wait for at least one of the service's checks to go critical
     while True:
@@ -111,14 +115,14 @@ def maybe_disable_service(c, service):
 
 def fetch_artefact(service, version):
     ## TODO some goddamn s3 thing, I don't know
-    return "{0}-{1}-sunos.tgz".format(service, version)
+    return "/tmp/{0}-{1}-sunos.tgz".format(service, version)
 
 def install_artefact(service, version, filename):
     subprocess.call(["mkdir", "-p", "/opt/helium/{0}".format(service)])
     subprocess.call(["tar", "-C", "/opt/helium/{0}".format(service), "-xf", filename])
     subprocess.call(["rm", "-f", "/opt/helium/{0}/current".format(service)])
     subprocess.call(["ln", "-sf", "/opt/helium/{0}/{0}-{1}/".format(service, version), "/opt/helium/{0}/current".format(service)])
-    
+
 def register_check(c, service, check_filename):
     with open(check_filename) as check_file:
         check = json.load(check_file)
@@ -197,6 +201,7 @@ def ensure_users(service):
 
 ## this can be used for primary and auxiliary services (like pgbouncer)
 def check_service(c, zonename, service, cnsname, primary=False):
+    print(service)
     version = read_required_key(c, 'service/{0}/version'.format(service))
 
     services = c.agent.services()
@@ -212,7 +217,6 @@ def check_service(c, zonename, service, cnsname, primary=False):
             elif tag.startswith("version-"):
                     current_version = tag[len("version-"):]
 
-   
     current_fs_version = check_service_symlink(service, current_version)
     if current_fs_version == None or current_version != current_fs_version:
         current_version = None
@@ -228,11 +232,12 @@ def check_service(c, zonename, service, cnsname, primary=False):
         install_artefact(service, version, filename)
         ensure_packages(service)
         ensure_users(service)
-        # ensure_roles(c, zonename, service, cnsname),
         smfgen(service)
         ## Run the install hook
         subprocess.call(["/opt/helium/{0}/current/helios/hooks/install.sh".format(service)])
         installed = True
+
+    ensure_roles(c, zonename, service, cnsname)
 
     ## compute the config SHA and compare it to the one in the tag
     index, configs = c.kv.get("service/{0}/config".format(service), recurse=True)
@@ -240,7 +245,7 @@ def check_service(c, zonename, service, cnsname, primary=False):
     if configs != None:
         for config in configs:
             json_config[config['Key'].split('/')[-1]] = config['Value'].decode("utf-8")
- 
+
     foo=netifaces.ifaddresses('net0')
     host_ip=foo[netifaces.AF_INET][0]['addr']
     json_config['host_ip'] = host_ip
@@ -261,19 +266,20 @@ def check_service(c, zonename, service, cnsname, primary=False):
         mustaches = glob.glob("/opt/helium/{0}/current/**/*.mustache".format(service), recursive=True)
         renderer = pystache.Renderer()
         for m in mustaches:
-                new_file = renderer.render_path(m, merged_config)
-                new_file_name, ext = os.path.splitext(m)
-                text_file = open(new_file_name, "w")
-                text_file.write(new_file)
-                text_file.close()
-       
+                if service != "helios":
+                    new_file = renderer.render_path(m, merged_config)
+                    new_file_name, ext = os.path.splitext(m)
+                    text_file = open(new_file_name, "w")
+                    text_file.write(new_file)
+                    text_file.close()
+
         subprocess.call(["/opt/helium/{0}/current/helios/hooks/config.sh".format(service)])
         configured = True
 
     current_session = None
     if primary == True:
         current_session = get_current_session(c, zonename, service)
-    
+
     if installed == True or configured == True:
         ## import the new service definition, it might have changed
         subprocess.call(["svccfg", "import", "/opt/helium/{0}/current/helios/config/service.xml".format(service)])
@@ -288,7 +294,7 @@ def check_service(c, zonename, service, cnsname, primary=False):
         ## destroy any old leader session
         if current_session:
             c.session.destroy(current_session)
-            current_session = None 
+            current_session = None
 
         print("waiting for health checks to go green")
         while True:
@@ -304,6 +310,8 @@ def check_service(c, zonename, service, cnsname, primary=False):
         if upgrade_session != None:
             release_upgrade_lock(c, upgrade_session)
         enter_service(c)
+        if service == "helios":
+            sys.exit()
 
     if current_session == None and primary == True:
         print("creating new session")
@@ -325,7 +333,7 @@ def check_service(c, zonename, service, cnsname, primary=False):
         print("renewing session")
         ## renew the session
         c.session.renew(current_session)
-    
+
     if primary == True:
         locked = c.kv.put("service/{0}/leader".format(service), zonename, acquire=current_session)
         if locked:

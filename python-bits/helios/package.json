@@ -1,0 +1,12 @@
+{
+  "name": "helium-helios",
+  "service_name": "helios",
+  "description": "Helium deployment manager",
+  "author": "foo",
+  "artifact": "s3://helium-releases/{{name}}/{{service_name}}-{{version}}-sunos.tgz",
+  "roles": [
+  ],
+  "packages": [
+  ],
+  "license": "foo"
+}
