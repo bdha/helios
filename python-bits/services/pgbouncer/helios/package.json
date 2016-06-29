@@ -1,6 +1,6 @@
 {
   "name": "helium-pgbouncer",
-  "service_name": "pgbouncee",
+  "service_name": "pgbouncer",
   "description": "pgbouncer",
   "author": "foo",
   "artifact": "s3://helium-releases/{{name}}/{{service_name}}-{{version}}-sunos.tgz",

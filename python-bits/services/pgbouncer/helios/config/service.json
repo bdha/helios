@@ -1,10 +1,10 @@
 {
-    "ident": "helium-pgbouncer",
-    "category": "application/management",
+    "ident": "pgbouncer",
+    "category": "helium/app",
     "label": "Helium pg bouncer",
     "user": "postgres",
     "group": "postgres",
     "start": {
-        "exec": "/opt/local/bin/pgbouncer -d:w /opt/helium/pgbouncer/current/etc/pgbouncer.ini"
+        "exec": "/opt/local/bin/pgbouncer -d /opt/helium/pgbouncer/current/etc/pgbouncer.ini"
     }
 }
