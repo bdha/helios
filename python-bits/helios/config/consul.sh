@@ -13,4 +13,4 @@ HOSTIP=`ifconfig net0 | grep inet | awk '{print $2}'`
 /opt/local/bin/consul agent -join=$CONSUL_HOST -data-dir=/var/consul \
   -bind $HOSTIP \
   -encrypt="$CONSUL_PASS" \
-  -dc=$CONSUL_DC
+  -dc=$CONSUL_DC &

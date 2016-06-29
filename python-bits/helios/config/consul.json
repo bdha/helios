@@ -1,9 +1,0 @@
-{
-    "ident": "consul",
-    "category": "helium/agent",
-    "label": "The highest elected official in the Roman Empire, also some golang thing",
-    "start": {
-        "exec": "/opt/helium/helios/current/helios/config/consul.sh",
-        "timeout": 60
-    }
-}
