@@ -1,7 +1,7 @@
 Introduction
 ------------
 
-Helios is a deployment system for Helium, it takes ideas from Chef, ContainerPilot and Habitat, throws away all the portability (ContainerPilot and Habitat don't support SmartOS anyway) and goes all in on SmartOS/SMF and Consul. It is written in POSIX SH and currently is less than 300 lines of code.
+Helios is a deployment system for Helium, it takes ideas from Chef, ContainerPilot and Habitat, throws away all the portability (ContainerPilot and Habitat don't support SmartOS anyway) and goes all in on SmartOS/SMF and Consul. It is written in Python (targeting 3.5).
 
 Why?
 ---
@@ -51,9 +51,10 @@ change over time). This hook is used to install dependancies, run migrations,
 add users, etc, and should be idempotent as it is also run for upgrades.
 
 Then, helios uses a combination of a `default.json` from the package and any
-overidden config from Consul to template any .mustache files in the package.
-This is commonly used for configuration variables, but can be used to template
-ANY file in the package ending in .mustache.
+overidden config from Consul to template any .mustache files in the package. A
+'config-pre' hook can also be provided that can return json to be merged with
+the template variables dictionary. This is commonly used for configuration
+variables, but can be used to template ANY file in the package ending in .mustache.
 
 If the configuration in Consul changes, helios notices and will re-template
 files and run the 'config' hook, which is used to tell the application how to
@@ -65,7 +66,7 @@ ports to attempt to connect to. See the consul documentation for more details
 here.
 
 Then, using the configured checks, helios will obtain a consul session and try
-to lock a 'leader' key. Helios runs periodically from cron, and so will renew
+to lock a 'leader' key. Helios runs periodically under SMF, and so will renew
 the session over time, and thus remain the leader (if elected). If helios stops
 running, or if the health checks start failing, an election will be held.
 
@@ -73,6 +74,17 @@ The election is currently non-binding, but the result could be used by haproxy
 for routing, or for something like 'what node in the cluster should I join'. The
 health of all the instances of a service can also be examined, so things that
 don't need a leader can still take bad nodes out of service, etc.
+
+Service upgrades also use a lock, although a different one. This means that if a
+deploy is bad somehow, only one node will be affected, and the rest of the nodes
+will not be able to obtain the lock to upgrade themselves. It also prevents all
+instances of a service rebooting at once and provides more of a rolling-restart
+approach.
+
+Helios applications can also have secondary 'roles', which are like the main
+application but they don't elect a leader. In fact, Helios manages itself via
+Helios, so you can deploy an upgrade to Helios just like you would any other
+application.
 
 How to make an application work with Helios
 -------------------------------------------
@@ -83,9 +95,12 @@ We also have a `helios` directory that is added to the package root:
 
 https://github.com/helium/router/tree/experiment/helios/helios
 
+`package.json` contains information about what pkgsrc packages should be
+installed, what 'roles' the service depends on, etc.
+
 The `default.json` is where you put all the default values for your templates (if they don't exist in either default.json or in Consul they end up blank in the config file, which is usually not what you want). Any of these variables can be overridden by setting them in Consul.
 
-The `smf` folder contains the SMF definition. Every time the package is upgraded, the new SMF definition is re-imported. Run scripts can also live here (I managed to get rid of the one router had).
+The `config/service.json` file contains the SMF definition, as json. Every time the package is upgraded, the new SMF manifest is generated using `smfgen` and re-imported. Run scripts can also live here (I managed to get rid of the one router had).
 
 `hooks` contains the 2 currently implemented hooks, the `install` and `config` hooks. More of these are planned, just not implemented yet.
 
@@ -94,9 +109,9 @@ The `smf` folder contains the SMF definition. Every time the package is upgraded
 Helios Commands
 ---------------
 
-Helios is just a big bag of undocumented shell scripts right now, here's a quick walkthrough.
+Helios is just a big bag of undocumented shell scripts and python right now, here's a quick walkthrough.
 
-Right now, helios can't spin a zone itself, it requires you spin a zone, bootstrap helios on there (also not documented).
+Right now, helios can't spin a zone itself, it requires you spin a zone and bootstrap helios on there.
 
 Once you have a zone that can run helios (we will bake helios into an image once it is ready, so this won't be necessary), you need to configure what version of a package you want to run in this environment:
 
@@ -108,20 +123,11 @@ This will make all `router` zones in this environment (staging, prod, whatever) 
 
 Then, once we spin a zone, we cal tell it we want it to be a router:
 
-
 ```
 ./add_zone.sh router ba1c9447-1b0e-4649-edd5-88bd887da1e1
 ```
 
 This tells the zone with that uuid that it will be running router. This command will block until the zone has actually come up and deployed the service.
-
-Because we don't have helios integrated into cron yet, you can run the helios client on the new zone
-
-```
-./client.sh
-```
-
-This will do all the steps noted above in the `how it works` section above. It exits once it is done.
 
 There's 3 scripts for managing the config
 
@@ -131,4 +137,26 @@ There's 3 scripts for managing the config
 ./show_config <service>
 ```
 
+Helios itself runs as a SMF service which was installed using the bootstrap
+script, or baked into the image.
+
+Bootstrapping
+-------------
+
+```
+mkdir -p /opt/helium/helios
+cd /opt/helium/helios/
+tar -xf <helios package>
+cd helios-<version>/helios
+./bootstrap.sh
+```
+
+Building helios packages
+------------------------
+
+cd into `python-bits` and run `make package`.
+
+There's also some service definitions for services we install from pkgsrc but
+want to run under helios (eg. pgbouncer). If you want to build packages for
+these you can use the `service_packages` script in `python-bits`.
 
