@@ -102,6 +102,8 @@ The `default.json` is where you put all the default values for your templates (i
 
 The `config/service.json` file contains the SMF definition, as json. Every time the package is upgraded, the new SMF manifest is generated using `smfgen` and re-imported. Run scripts can also live here (I managed to get rid of the one router had).
 
+The `config/users` directory contains user definitions, if the service needs a a user to run under to be created.
+
 `hooks` contains the 2 currently implemented hooks, the `install` and `config` hooks. More of these are planned, just not implemented yet.
 
 `checks` contains the consul check definitions. Router has 3, one script, one HTTP and one TCP. You can actually see that some of these files are templated because they rely on the configuration variables for port assignments. For more detail on the consul check syntax, see https://www.consul.io/docs/agent/checks.html
