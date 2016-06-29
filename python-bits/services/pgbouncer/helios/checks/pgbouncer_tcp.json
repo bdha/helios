@@ -1,0 +1,8 @@
+{
+    "id": "pgbouncer-tcp",
+    "name": "Check pgbouncer tcp connection",
+    "serviceid": "pgbouncer",
+    "tcp": "localhost:5432",
+    "interval": "10s",
+    "timeout": "1s"
+}
