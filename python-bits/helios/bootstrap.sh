@@ -11,6 +11,9 @@ pkgin install python35
 pkgin install consul
 ## if we want to create home directories here, we need to make sure the base dir exists
 mkdir /var/helium
+smfgen < /opt/helium/helios/current/helios/config/consul.json > /opt/helium/helios/current/helios/config/consul.xml
 smfgen < /opt/helium/helios/current/helios/config/service.json > /opt/helium/helios/current/helios/config/service.xml
+svccfg import /opt/helium/helios/current/helios/config/consul.xml
 svccfg import /opt/helium/helios/current/helios/config/service.xml
+svcadm clear consul
 svcadm clear helios
