@@ -138,6 +138,13 @@ def services_list():
       j = json.dumps(s)
       return j
 
+# PUT Set arbitrary service config.
+# -d { "value": "thing" }
+#@app.route('/services/<service>/config/<key>', methods = ['PUT']))
+
+# DELETE Delete a config key.
+#@app.route('/services/<service>/config/<key>', methods = ['DELETE']))
+
 # POST Create a new instance of a service
 # This creates a zone.
 # Returns the nodename.
@@ -148,11 +155,19 @@ def services_list():
 # GET all instances of services
 #@app.route('/instances' methods = ['GET'])
 
+# GET an instances state.
+# This will return the zone status, and the defined service status.
+# For instance: The zone might be "running", but the service might be "down".
+# Or the zone might be "stopped", but the service is defined as "up", so when
+# the zone comes back up, the service will start. By default, the service will
+# be up.
+#@app.route('/instances/<instance>/state, methods = ['GET'])
+
 # PUT Change an instance's state.
 # e.g., start, reboot, stop, mark down, mark up
 # start, reboot, stop are Triton commands.
 # mark down/up are Helios states the agent will notice and act on.
-#@app.route('/instances/<instance>/state/<state>
+#@app.route('/instances/<instance>/state/<state>, methods = ['PUT'])
 
 # DELETE an instance.
 # This destroys the zone.
@@ -162,9 +177,3 @@ def services_list():
 # Returns a list of the services it provides, its provisioning status, IP addr, health, etc.
 #@app.route('/instances/<instance>', methods = ['GET'])
 
-# PUT Set arbitrary instance config.
-# -d { "value": "thing" }
-#@app.route('/instances/:instance/config/<key>', methods = ['PUT']))
-
-# DELETE Delete a config key.
-#@app.route('/instances/:instance/config/<key>', methods = ['DELETE']))
