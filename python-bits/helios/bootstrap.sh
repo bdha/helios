@@ -9,6 +9,8 @@ npm install -g smfgen
 ## apparently libpython doesn't end up in the package, bleh
 pkgin -y install python35
 pkgin -y install consul
+groupadd consul
+useradd -g consul -s /usr/bin/false -d /var/consul -m consul
 ## if we want to create home directories here, we need to make sure the base dir exists
 mkdir /var/helium
 smfgen < /opt/helium/helios/current/helios/config/service.json > /opt/helium/helios/current/helios/config/service.xml
