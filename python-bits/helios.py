@@ -114,8 +114,10 @@ def maybe_disable_service(c, service):
         time.sleep(5)
 
 def fetch_artefact(service, version):
-    ## TODO some goddamn s3 thing, I don't know
-    return "/tmp/{0}-{1}-sunos.tgz".format(service, version)
+    dest = "/tmp/{0}-{1}-sunos.tgz".format(service, version)
+    url = "http://files.helium.systems/releases/{0}/{0}-{1}-sunos.tgz".format(service, version)
+    subprocess.call(["wget", "-O", dest, url])
+    return dest
 
 def install_artefact(service, version, filename):
     subprocess.call(["mkdir", "-p", "/opt/helium/{0}".format(service)])
