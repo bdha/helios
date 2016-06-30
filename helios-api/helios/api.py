@@ -148,10 +148,6 @@ def services_list():
 # GET all instances of services
 #@app.route('/instances' methods = ['GET'])
 
-# PUT Change or set an instance's role.
-# Must be a single string.
-#@app.route('/instances/<instance>/role
-
 # PUT Change an instance's state.
 # e.g., start, reboot, stop, mark down, mark up
 # start, reboot, stop are Triton commands.
