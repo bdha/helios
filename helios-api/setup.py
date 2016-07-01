@@ -9,5 +9,5 @@ setup(name='Helios',
       author_email='helium.com',
       url='https://github.com/helium/helios-api/',
       py_modules=['helios'],
-      install_requires=['python-consul', 'flask-restful' ]
+      install_requires=['python-consul', 'flask-restful', 'prettytable' ]
      )
